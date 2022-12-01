@@ -65,8 +65,15 @@ class _HealthAppState extends State<HealthApp> {
     // requesting access to the data types before reading them
     // note that strictly speaking, the [permissions] are not
     // needed, since we only want READ access.
-    bool requested = await health.requestAuthorization(types, permissions: permissions);
-    print('requested: $requested');
+
+    bool requested;
+    try {
+      requested = await health.requestAuthorization(types, permissions: permissions);
+      print('requested: $requested');
+    } catch (error) {
+      requested = false;
+      print("Exception in requestAuthorization: $error");
+    }
 
     // If we are trying to read Step Count, Workout, Sleep or other data that requires
     // the ACTIVITY_RECOGNITION permission, we need to request the permission first.

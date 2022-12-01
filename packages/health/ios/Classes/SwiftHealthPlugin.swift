@@ -54,6 +54,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     let HEADACHE_MILD = "HEADACHE_MILD"
     let HEADACHE_MODERATE = "HEADACHE_MODERATE"
     let HEADACHE_SEVERE = "HEADACHE_SEVERE"
+    let PEAK_EXPIRATORY_FLOW_RATE = "PEAK_EXPIRATORY_FLOW_RATE"
+    let FORCED_VITAL_CAPACITY = "FORCED_VITAL_CAPACITY"
     
     // Health Unit types
     // MOLE_UNIT_WITH_MOLAR_MASS, // requires molar mass input - not supported yet
@@ -103,6 +105,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     let PERCENT = "PERCENT"
     let BEATS_PER_MINUTE = "BEATS_PER_MINUTE"
     let MILLIGRAM_PER_DECILITER = "MILLIGRAM_PER_DECILITER"
+    let LITER_PER_MINUTE = "LITER_PER_MINUTE"
     let UNKNOWN_UNIT = "UNKNOWN_UNIT"
     let NO_UNIT = "NO_UNIT"
     
@@ -588,6 +591,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         unitDict[PERCENT] = HKUnit.percent()
         unitDict[BEATS_PER_MINUTE] = HKUnit.init(from: "count/min")
         unitDict[MILLIGRAM_PER_DECILITER] = HKUnit.init(from: "mg/dL")
+        unitDict[LITER_PER_MINUTE] = HKUnit.liter().unitDivided(by: HKUnit.minute())
         unitDict[UNKNOWN_UNIT] = HKUnit.init(from: "")
         unitDict[NO_UNIT] = HKUnit.init(from: "")
         
@@ -674,7 +678,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         workoutActivityTypeMap["WRESTLING"] = .wrestling
         workoutActivityTypeMap["OTHER"] = .other
         
-        
+        dataTypesDict[FORCED_VITAL_CAPACITY] = HKObjectType.quantityType(forIdentifier: .forcedVitalCapacity)
+        dataTypesDict[PEAK_EXPIRATORY_FLOW_RATE] = HKObjectType.quantityType(forIdentifier: .peakExpiratoryFlowRate)
         
         // Set up iOS 13 specific types (ordinary health data types)
         if #available(iOS 13.0, *) {
