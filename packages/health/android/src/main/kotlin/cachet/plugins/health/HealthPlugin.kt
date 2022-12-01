@@ -60,6 +60,7 @@ class HealthPlugin(private var channel: MethodChannel? = null) : MethodCallHandl
   private var WATER = "WATER"
   private var SLEEP = "SLEEP"
   private var WORKOUT = "WORKOUT"
+  private var BASAL_ENERGY_BURNED = "BASAL_ENERGY_BURNED"
 
   val workoutTypeMap = mapOf(
     "AEROBICS" to FitnessActivities.AEROBICS,
@@ -268,6 +269,7 @@ class HealthPlugin(private var channel: MethodChannel? = null) : MethodCallHandl
       WATER -> DataType.TYPE_HYDRATION
       SLEEP -> DataType.TYPE_SLEEP_SEGMENT
       WORKOUT -> DataType.TYPE_ACTIVITY_SEGMENT
+      BASAL_ENERGY_BURNED -> DataType.TYPE_BASAL_METABOLIC_RATE
       else -> throw IllegalArgumentException("Unsupported dataType: $type")
     }
   }
@@ -290,6 +292,7 @@ class HealthPlugin(private var channel: MethodChannel? = null) : MethodCallHandl
       WATER -> Field.FIELD_VOLUME
       SLEEP -> Field.FIELD_SLEEP_SEGMENT_TYPE
       WORKOUT -> Field.FIELD_ACTIVITY
+      BASAL_ENERGY_BURNED -> Field.FIELD_CALORIES
       else -> throw IllegalArgumentException("Unsupported dataType: $type")
     }
   }
