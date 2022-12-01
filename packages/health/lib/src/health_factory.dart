@@ -101,6 +101,14 @@ class HealthFactory {
           'The length of [types] must be same as that of [permissions].');
     }
 
+    // If not implemented on platform, throw an exception
+    for(final dataType in types){
+      if (!isDataTypeAvailable(dataType)) {
+        throw HealthException(
+            dataType, 'Not available on platform $_platformType');
+      }
+    }
+
     final mTypes = List<HealthDataType>.from(types, growable: true);
     final mPermissions = permissions == null
         ? List<int>.filled(types.length, HealthDataAccess.READ.index,

@@ -59,6 +59,9 @@ enum HealthDataType {
   LOW_HEART_RATE_EVENT,
   IRREGULAR_HEART_RATE_EVENT,
   ELECTRODERMAL_ACTIVITY,
+
+  PEAK_EXPIRATORY_FLOW_RATE,
+  FORCED_VITAL_CAPACITY,
 }
 
 enum HealthDataAccess {
@@ -109,6 +112,8 @@ const List<HealthDataType> _dataTypeKeysIOS = [
   HealthDataType.HEADACHE_MODERATE,
   HealthDataType.HEADACHE_SEVERE,
   HealthDataType.HEADACHE_UNSPECIFIED,
+  HealthDataType.PEAK_EXPIRATORY_FLOW_RATE,
+  HealthDataType.FORCED_VITAL_CAPACITY
 ];
 
 /// List of data types available on Android
@@ -174,6 +179,8 @@ const Map<HealthDataType, HealthDataUnit> _dataTypeToUnit = {
   HealthDataType.HEADACHE_MODERATE: HealthDataUnit.MINUTE,
   HealthDataType.HEADACHE_SEVERE: HealthDataUnit.MINUTE,
   HealthDataType.HEADACHE_UNSPECIFIED: HealthDataUnit.MINUTE,
+  HealthDataType.PEAK_EXPIRATORY_FLOW_RATE: HealthDataUnit.LITER_PER_MINUTE,
+  HealthDataType.FORCED_VITAL_CAPACITY: HealthDataUnit.LITER,
 
   // Heart Rate events (specific to Apple Watch)
   HealthDataType.HIGH_HEART_RATE_EVENT: HealthDataUnit.NO_UNIT,
@@ -207,6 +214,7 @@ enum HealthDataUnit {
 
   // Volume units
   LITER,
+  LITER_PER_MINUTE,
   MILLILITER,
   FLUID_OUNCE_US,
   FLUID_OUNCE_IMPERIAL,
