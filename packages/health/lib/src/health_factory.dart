@@ -26,7 +26,7 @@ class HealthFactory {
           ? _dataTypeKeysAndroid.contains(dataType)
           : _dataTypeKeysIOS.contains(dataType);
 
-  void setLogger(HeathLogger logger) {
+  void setLogger(HealthLogger logger) {
     if (_logger == null) {
       _setLogsChannelListener();
     }
