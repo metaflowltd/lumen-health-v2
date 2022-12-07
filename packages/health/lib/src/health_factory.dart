@@ -15,7 +15,7 @@ class HealthFactory {
   static const MethodChannel _channel = MethodChannel('flutter_health');
   String? _deviceId;
   final _deviceInfo = DeviceInfoPlugin();
-  HeathLogger? _logger;
+  HealthLogger? _logger;
 
   static PlatformType _platformType =
       Platform.isAndroid ? PlatformType.ANDROID : PlatformType.IOS;
