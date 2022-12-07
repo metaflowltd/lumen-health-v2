@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -40,27 +40,32 @@ class _HealthAppState extends State<HealthApp> {
     // define the types to get
     final types = [
       // HealthDataType.TOTAL_NUTRIENTS,
-      // HealthDataType.DIETARY_FATS_CONSUMED,
-      // HealthDataType.DIETARY_PROTEIN_CONSUMED,
+      HealthDataType.DIETARY_FATS_CONSUMED,
+      HealthDataType.DIETARY_PROTEIN_CONSUMED,
       HealthDataType.MENSTRUATION_DATA,
-      // HealthDataType.WEIGHT,
-      // HealthDataType.HEIGHT,
-      // HealthDataType.BLOOD_GLUCOSE,
-      // HealthDataType.WORKOUT,
-      // HealthDataType.SLEEP,
+      HealthDataType.WEIGHT,
+      HealthDataType.HEIGHT,
+      HealthDataType.BLOOD_GLUCOSE,
+      HealthDataType.WORKOUT,
+      HealthDataType.SLEEP,
       // Uncomment these lines on iOS - only available on iOS
-      // HealthDataType.AUDIOGRAM
+      HealthDataType.AUDIOGRAM,
+      HealthDataType.STEPS,
     ];
 
     // with coresponsing permissions
     final permissions = [
+      // HealthDataAccess.READ,
       HealthDataAccess.READ,
-      // HealthDataAccess.READ,
-      // HealthDataAccess.READ,
-      // HealthDataAccess.READ,
-      // HealthDataAccess.READ,
-      // HealthDataAccess.READ,
-      // HealthDataAccess.READ,
+      HealthDataAccess.READ,
+      HealthDataAccess.READ,
+      HealthDataAccess.READ,
+      HealthDataAccess.READ,
+      HealthDataAccess.READ,
+      HealthDataAccess.READ,
+      HealthDataAccess.READ,
+      HealthDataAccess.READ,
+      HealthDataAccess.READ,
     ];
 
     // get data within the last 24 hours
@@ -193,36 +198,11 @@ class _HealthAppState extends State<HealthApp> {
         itemCount: _healthDataList.length,
         itemBuilder: (_, index) {
           HealthDataPoint p = _healthDataList[index];
-          if (p.value is AudiogramHealthValue) {
-            return ListTile(
-              title: Text("${p.typeString}: ${p.value}"),
-              trailing: Text('${p.unitString}'),
-              subtitle: Text('${p.dateFrom} - ${p.dateTo}'),
-            );
-          }
-          if (p.value is WorkoutHealthValue) {
-            final item = p.value as WorkoutHealthValue;
-            final isAndroid = Platform.isAndroid;
-            return ListTile(
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "${p.typeString}: ${item.totalEnergyBurned} ${item.totalEnergyBurnedUnit?.name}",
-                  ),
-                  Text("Name: ${item.workoutActivityType.name}"),
-                  Text(
-                      "nativeWorkoutActivityType: ${isAndroid ? item.androidNativeWorkoutActivityType : item.iOSNativeWorkoutActivityType}"),
-                  Text("metadata: ${item.metadata}")
-                ],
-              ),
-              subtitle: Text('${p.dateFrom} - ${p.dateTo}'),
-            );
-          }
+          final str = json.encode(p);
           return ListTile(
-            title: Text("${p.typeString}: ${p.value}"),
-            trailing: Text('${p.unitString}'),
-            subtitle: Text('${p.dateFrom} - ${p.dateTo}'),
+            title: Text(""),
+            trailing: Text(''),
+            subtitle: Text('$str'),
           );
         });
   }
