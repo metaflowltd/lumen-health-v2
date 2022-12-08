@@ -381,7 +381,9 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         };
     }
     
-    private func canAddToJson(value: Any?) -> Any? {
+    private func jsonValueFrom(value: Any?) -> Any? {
+        // we might have a metadata value that is not serializeble into json
+        
         let dummyKey = "value"
         guard let value = value else {return false}
             
@@ -488,7 +490,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                     if let metadata = sample.metadata {
                         var metadataVal = [:]
                         metadata.keys.forEach { key in
-                            if let value = canAddToJson(value: metadata[key]) {
+                            if let value = jsonValueFrom(value: metadata[key]) {
                                 metadataVal[key] = value
                             }
                         }
