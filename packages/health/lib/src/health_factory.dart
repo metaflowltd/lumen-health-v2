@@ -203,8 +203,8 @@ class HealthFactory {
       'value': value,
       'dataTypeKey': type.name,
       'dataUnitKey': unit.name,
-      'startTime': startTime.millisecondsSinceEpoch,
-      'endTime': endTime.millisecondsSinceEpoch
+      'startTimeSec': startTime.millisecondsSinceEpoch ~/ 1000,
+      'endTimeSec': endTime.millisecondsSinceEpoch ~/ 1000,
     };
     bool? success = await _channel.invokeMethod('writeData', args);
     return success ?? false;
@@ -239,8 +239,8 @@ class HealthFactory {
       'leftEarSensitivities': leftEarSensitivities,
       'rightEarSensitivities': rightEarSensitivities,
       'dataTypeKey': HealthDataType.AUDIOGRAM.name,
-      'startTime': startTime.millisecondsSinceEpoch,
-      'endTime': endTime.millisecondsSinceEpoch,
+      'startTimeSec': startTime.millisecondsSinceEpoch ~/ 1000,
+      'endTimeSec': endTime.millisecondsSinceEpoch ~/ 1000,
       'metadata': metadata,
     };
     bool? success = await _channel.invokeMethod('writeAudiogram', args);
@@ -288,8 +288,8 @@ class HealthFactory {
     final args = <String, dynamic>{
       'dataTypeKey': dataType.name,
       'dataUnitKey': _dataTypeToUnit[dataType]!.name,
-      'startTime': startTime.millisecondsSinceEpoch,
-      'endTime': endTime.millisecondsSinceEpoch
+      'startTimeSec': startTime.millisecondsSinceEpoch ~/ 1000,
+      'endTimeSec': endTime.millisecondsSinceEpoch ~/ 1000,
     };
     final fetchedDataPoints = await _channel.invokeMethod('getData', args);
     if (fetchedDataPoints != null) {
@@ -335,8 +335,8 @@ class HealthFactory {
     DateTime endTime,
   ) async {
     final args = <String, dynamic>{
-      'startTime': startTime.millisecondsSinceEpoch,
-      'endTime': endTime.millisecondsSinceEpoch
+      'startTimeSec': startTime.millisecondsSinceEpoch ~/ 1000,
+      'endTimeSec': endTime.millisecondsSinceEpoch ~/ 1000,
     };
     final stepsCount = await _channel.invokeMethod<int?>(
       'getTotalStepsInInterval',
@@ -394,8 +394,8 @@ class HealthFactory {
     }
     final args = <String, dynamic>{
       'activityType': activityType.name,
-      'startTime': start.millisecondsSinceEpoch,
-      'endTime': end.millisecondsSinceEpoch,
+      'startTimeSec': start.millisecondsSinceEpoch ~/ 1000,
+      'endTimeSec': end.millisecondsSinceEpoch ~/ 1000,
       'totalEnergyBurned': totalEnergyBurned,
       'totalEnergyBurnedUnit': totalEnergyBurnedUnit.name,
       'totalDistance': totalDistance,

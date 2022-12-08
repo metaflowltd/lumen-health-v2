@@ -253,14 +253,14 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
               let value = (arguments["value"] as? Double),
               let type = (arguments["dataTypeKey"] as? String),
               let unit = (arguments["dataUnitKey"] as? String),
-              let startTime = (arguments["startTime"] as? NSNumber),
-              let endTime = (arguments["endTime"] as? NSNumber)
+              let startTime = (arguments["startTimeSec"] as? NSNumber),
+              let endTime = (arguments["endTimeSec"] as? NSNumber)
         else {
             throw PluginError(message: "Invalid Arguments")
         }
         
-        let dateFrom = Date(timeIntervalSince1970: startTime.doubleValue / 1000)
-        let dateTo = Date(timeIntervalSince1970: endTime.doubleValue / 1000)
+        let dateFrom = Date(timeIntervalSince1970: startTime.doubleValue)
+        let dateTo = Date(timeIntervalSince1970: endTime.doubleValue)
         
         let sample: HKObject
         
@@ -287,14 +287,14 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
               let frequencies = (arguments["frequencies"] as? Array<Double>),
               let leftEarSensitivities = (arguments["leftEarSensitivities"] as? Array<Double>),
               let rightEarSensitivities = (arguments["rightEarSensitivities"] as? Array<Double>),
-              let startTime = (arguments["startTime"] as? NSNumber),
-              let endTime = (arguments["endTime"] as? NSNumber)
+              let startTime = (arguments["startTimeSec"] as? NSNumber),
+              let endTime = (arguments["endTimeSec"] as? NSNumber)
         else {
             throw PluginError(message: "Invalid Arguments")
         }
         
-        let dateFrom = Date(timeIntervalSince1970: startTime.doubleValue / 1000)
-        let dateTo = Date(timeIntervalSince1970: endTime.doubleValue / 1000)
+        let dateFrom = Date(timeIntervalSince1970: startTime.doubleValue)
+        let dateTo = Date(timeIntervalSince1970: endTime.doubleValue)
         
         var sensitivityPoints = [HKAudiogramSensitivityPoint]()
         
@@ -333,8 +333,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     func writeWorkoutData(call: FlutterMethodCall, result: @escaping FlutterResult) throws {
         guard let arguments = call.arguments as? NSDictionary,
               let activityType = (arguments["activityType"] as? String),
-              let startTime = (arguments["startTime"] as? NSNumber),
-              let endTime = (arguments["endTime"] as? NSNumber),
+              let startTime = (arguments["startTimeSec"] as? NSNumber),
+              let endTime = (arguments["endTimeSec"] as? NSNumber),
               let ac = workoutActivityTypeMap[activityType]
         else {
             throw PluginError(message: "Invalid Arguments - ActivityType, startTime or endTime invalid")
@@ -351,8 +351,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             totalDistance = HKQuantity(unit: unitDict[(arguments["totalDistanceUnit"] as! String)]!, doubleValue: td)
         }
         
-       let dateFrom = Date(timeIntervalSince1970: startTime.doubleValue / 1000)
-       let dateTo = Date(timeIntervalSince1970: endTime.doubleValue / 1000)
+       let dateFrom = Date(timeIntervalSince1970: startTime.doubleValue)
+       let dateTo = Date(timeIntervalSince1970: endTime.doubleValue)
         
         var workout: HKWorkout
         
@@ -401,14 +401,16 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         let dataUnitKey = (arguments?["dataUnitKey"] as? String)
         let limit = (arguments?["limit"] as? Int) ?? HKObjectQueryNoLimit
         
-        guard let startTime = (arguments?["startTime"] as? NSNumber), let endTime = (arguments?["endTime"] as? NSNumber) else {
+        guard let startTime = (arguments?["startTimeSec"] as? NSNumber),
+                let endTime = (arguments?["endTimeSec"] as? NSNumber) else {
             SwiftHealthPlugin.logStreamHandler.sendError("start time or end time are missing from getData request")
+            result(nil)
             return
         }
         
         // Convert dates from milliseconds to Date()
-        let dateFrom = Date(timeIntervalSince1970: startTime.doubleValue / 1000)
-        let dateTo = Date(timeIntervalSince1970: endTime.doubleValue / 1000)
+        let dateFrom = Date(timeIntervalSince1970: startTime.doubleValue)
+        let dateTo = Date(timeIntervalSince1970: endTime.doubleValue)
         
         let dataType = dataTypeLookUp(key: dataTypeKey)
         
@@ -537,12 +539,16 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     
     func getTotalStepsInInterval(call: FlutterMethodCall, result: @escaping FlutterResult) {
         let arguments = call.arguments as? NSDictionary
-        let startTime = (arguments?["startTime"] as? NSNumber) ?? 0
-        let endTime = (arguments?["endTime"] as? NSNumber) ?? 0
+        guard let startTime = (arguments?["startTimeSec"] as? NSNumber),
+              let endTime = (arguments?["endTimeSec"] as? NSNumber) else {
+            SwiftHealthPlugin.logStreamHandler.sendError("start time or end time are missing from getTotalStepsInInterval request")
+            result(nil)
+            return
+        }
         
         // Convert dates from milliseconds to Date()
-        let dateFrom = Date(timeIntervalSince1970: startTime.doubleValue / 1000)
-        let dateTo = Date(timeIntervalSince1970: endTime.doubleValue / 1000)
+        let dateFrom = Date(timeIntervalSince1970: startTime.doubleValue)
+        let dateTo = Date(timeIntervalSince1970: endTime.doubleValue)
         
         let sampleType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
         let predicate = HKQuery.predicateForSamples(withStart: dateFrom, end: dateTo, options: .strictStartDate)
