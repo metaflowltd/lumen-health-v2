@@ -40,16 +40,16 @@ class _HealthAppState extends State<HealthApp> {
     // define the types to get
     final types = [
       // HealthDataType.TOTAL_NUTRIENTS,
-      HealthDataType.DIETARY_FATS_CONSUMED,
-      HealthDataType.DIETARY_PROTEIN_CONSUMED,
-      HealthDataType.MENSTRUATION_DATA,
-      HealthDataType.WEIGHT,
-      HealthDataType.HEIGHT,
-      HealthDataType.BLOOD_GLUCOSE,
+      // HealthDataType.DIETARY_FATS_CONSUMED,
+      // HealthDataType.DIETARY_PROTEIN_CONSUMED,
+      // HealthDataType.MENSTRUATION_DATA,
+      // HealthDataType.WEIGHT,
+      // HealthDataType.HEIGHT,
+      // HealthDataType.BLOOD_GLUCOSE,
       HealthDataType.WORKOUT,
       HealthDataType.SLEEP,
       // Uncomment these lines on iOS - only available on iOS
-      HealthDataType.AUDIOGRAM,
+      // HealthDataType.AUDIOGRAM,
       HealthDataType.STEPS,
     ];
 
@@ -59,13 +59,13 @@ class _HealthAppState extends State<HealthApp> {
       HealthDataAccess.READ,
       HealthDataAccess.READ,
       HealthDataAccess.READ,
-      HealthDataAccess.READ,
-      HealthDataAccess.READ,
-      HealthDataAccess.READ,
-      HealthDataAccess.READ,
-      HealthDataAccess.READ,
-      HealthDataAccess.READ,
-      HealthDataAccess.READ,
+      // HealthDataAccess.READ,
+      // HealthDataAccess.READ,
+      // HealthDataAccess.READ,
+      // HealthDataAccess.READ,
+      // HealthDataAccess.READ,
+      // HealthDataAccess.READ,
+      // HealthDataAccess.READ,
     ];
 
     // get data within the last 24 hours

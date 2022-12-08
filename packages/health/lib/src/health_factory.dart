@@ -317,7 +317,7 @@ class HealthFactory {
       }
       return previousValue;
     });
-    return list;
+    return removeDuplicates(list);
   }
 
   /// Given an array of [HealthDataPoint]s, this method will return the array
