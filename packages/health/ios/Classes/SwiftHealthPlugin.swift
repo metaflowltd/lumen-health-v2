@@ -370,13 +370,41 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         })
     }
     
+    private func strFrom(date: Date) -> String {
+        if #available(iOS 15.0, *) {
+            return date.ISO8601Format()
+        } else {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
+            dateFormatter.calendar = Calendar.init(identifier: .gregorian)
+            return dateFormatter.string(from: date)
+        };
+    }
+    
+    private func canAddToJson(value: Any?) -> Any? {
+        let dummyKey = "value"
+        guard let value = value else {return false}
+            
+        do {
+            var data = try JSONSerialization.data(withJSONObject: [dummyKey: value])
+            let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String : Any]
+            return json?[dummyKey]
+        } catch {
+            return nil
+        }
+        
+    }
+    
     func getData(call: FlutterMethodCall, result: @escaping FlutterResult) {
         let arguments = call.arguments as? NSDictionary
         let dataTypeKey = (arguments?["dataTypeKey"] as? String)!
         let dataUnitKey = (arguments?["dataUnitKey"] as? String)
-        let startTime = (arguments?["startTime"] as? NSNumber) ?? 0
-        let endTime = (arguments?["endTime"] as? NSNumber) ?? 0
         let limit = (arguments?["limit"] as? Int) ?? HKObjectQueryNoLimit
+        
+        guard let startTime = (arguments?["startTime"] as? NSNumber), let endTime = (arguments?["endTime"] as? NSNumber) else {
+            SwiftHealthPlugin.logStreamHandler.sendError("start time or end time are missing from getData request")
+            return
+        }
         
         // Convert dates from milliseconds to Date()
         let dateFrom = Date(timeIntervalSince1970: startTime.doubleValue / 1000)
@@ -396,11 +424,11 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                 let dictionaries = samples.map { sample -> NSDictionary in
                     return [
                         "uuid": "\(sample.uuid)",
-                        "value": sample.quantity.doubleValue(for: unit!),
-                        "date_from": Int(sample.startDate.timeIntervalSince1970 * 1000),
-                        "date_to": Int(sample.endDate.timeIntervalSince1970 * 1000),
-                        "source_id": sample.sourceRevision.source.bundleIdentifier,
-                        "source_name": sample.sourceRevision.source.name
+                        "doubleValue": sample.quantity.doubleValue(for: unit!),
+                        "startDate": strFrom(date: sample.startDate),
+                        "endDate": strFrom(date: sample.endDate),
+                        "sourceBundleIdentifier": sample.sourceRevision.source.bundleIdentifier,
+                        "sourceName": sample.sourceRevision.source.name
                     ]
                 }
                 DispatchQueue.main.async {
@@ -427,10 +455,10 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                     return [
                         "uuid": "\(sample.uuid)",
                         "value": sample.value,
-                        "date_from": Int(sample.startDate.timeIntervalSince1970 * 1000),
-                        "date_to": Int(sample.endDate.timeIntervalSince1970 * 1000),
-                        "source_id": sample.sourceRevision.source.bundleIdentifier,
-                        "source_name": sample.sourceRevision.source.name
+                        "startDate": strFrom(date: sample.startDate),
+                        "endDate": strFrom(date: sample.endDate),
+                        "sourceBundleIdentifier": sample.sourceRevision.source.bundleIdentifier,
+                        "sourceName": sample.sourceRevision.source.name
                     ]
                 }
                 DispatchQueue.main.async {
@@ -439,21 +467,33 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                 
             case let (samplesWorkout as [HKWorkout]) as Any:
                 
-                let dictionaries = samplesWorkout.map { sample -> NSDictionary in
-                    return [
-                        "uuid": "\(sample.uuid)",
-                        "iOSNativeWorkoutActivityType": sample.workoutActivityType.rawValue,
-                        "metadata": sample.description,
-                        "workoutActivityType": workoutActivityTypeMap.first(where: {$0.value == sample.workoutActivityType})?.key,
-                        "totalEnergyBurned": sample.totalEnergyBurned?.doubleValue(for: HKUnit.kilocalorie()),
-                        "totalEnergyBurnedUnit": "KILOCALORIE",
-                        "totalDistance": sample.totalDistance?.doubleValue(for: HKUnit.meter()),
-                        "totalDistanceUnit": "METER",
-                        "date_from": Int(sample.startDate.timeIntervalSince1970 * 1000),
-                        "date_to": Int(sample.endDate.timeIntervalSince1970 * 1000),
-                        "source_id": sample.sourceRevision.source.bundleIdentifier,
-                        "source_name": sample.sourceRevision.source.name
-                    ]
+                let dictionaries = samplesWorkout.map { sample -> [String: Any] in
+                    var workout: [String: Any] = [ "uuid": "\(sample.uuid)",
+                                    "workoutActivityType": sample.workoutActivityType.rawValue,
+                                    "startDate": strFrom(date: sample.startDate),
+                                    "endDate": strFrom(date: sample.endDate),
+                                    "source_id": sample.sourceRevision.source.bundleIdentifier,
+                                    "source_name": sample.sourceRevision.source.name]
+                    if let workoutActivityType = workoutActivityTypeMap.first(where: {$0.value == sample.workoutActivityType})?.key {
+                        workout["workoutActivityType"] = workoutActivityType
+                    }
+                    if let totalEnergyBurned = sample.totalEnergyBurned?.doubleValue(for: HKUnit.kilocalorie()) {
+                        workout["totalEnergyBurned"] = totalEnergyBurned
+                    }
+                    if let totalDistance = sample.totalDistance?.doubleValue(for: HKUnit.meter()) {
+                        workout["totalDistance"] = totalDistance
+                    }
+                    if let metadata = sample.metadata {
+                        var metadataVal = [:]
+                        metadata.keys.forEach { key in
+                            if let value = canAddToJson(value: metadata[key]) {
+                                metadataVal[key] = value
+                            }
+                        }
+                        workout["metadata"] = metadataVal
+                    }
+
+                    return workout
                 }
                 
                 DispatchQueue.main.async {
@@ -475,10 +515,10 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                         "frequencies": frequencies,
                         "leftEarSensitivities": leftEarSensitivities,
                         "rightEarSensitivities": rightEarSensitivities,
-                        "date_from": Int(sample.startDate.timeIntervalSince1970 * 1000),
-                        "date_to": Int(sample.endDate.timeIntervalSince1970 * 1000),
-                        "source_id": sample.sourceRevision.source.bundleIdentifier,
-                        "source_name": sample.sourceRevision.source.name
+                        "startDate": strFrom(date: sample.startDate),
+                        "endDate": strFrom(date: sample.endDate),
+                        "sourceBundleIdentifier": sample.sourceRevision.source.bundleIdentifier,
+                        "sourceName": sample.sourceRevision.source.name
                     ]
                 }
                 DispatchQueue.main.async {

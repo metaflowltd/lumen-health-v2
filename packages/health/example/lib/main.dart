@@ -78,7 +78,6 @@ class _HealthAppState extends State<HealthApp> {
     bool requested = false;
     try {
       requested = await health.requestAuthorization(types, permissions: permissions);
-      print('requested: $requested');
     } catch (error) {
       requested = false;
       print("Exception in getHealthDataFromTypes: $error");
@@ -96,6 +95,7 @@ class _HealthAppState extends State<HealthApp> {
       try {
         // fetch health data
         List<HealthDataPoint> healthData = await health.getHealthDataFromTypes(yesterday, now, types);
+
         // save all the new data points (only the first 200)
         _healthDataList.addAll((healthData.length < 200) ? healthData : healthData.sublist(0, 200));
       } catch (error) {
