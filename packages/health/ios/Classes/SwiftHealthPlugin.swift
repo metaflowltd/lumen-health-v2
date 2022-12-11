@@ -372,7 +372,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     
     private func strFrom(date: Date) -> String {
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
         dateFormatter.calendar = Calendar.init(identifier: .gregorian)
         return dateFormatter.string(from: date)
     }
