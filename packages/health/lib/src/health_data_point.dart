@@ -12,7 +12,7 @@ class HealthDataPoint extends Equatable {
   Map<String, dynamic> toJson() => _map;
 
   @override
-  List<Object?> get props {
+  List<Object> get props {
     try {
       final str = json.encode(_map);
       return [str];
