@@ -67,7 +67,7 @@ class HealthPlugin(private var channel: MethodChannel? = null) : MethodCallHandl
   private var TOTAL_NUTRIENTS = "TOTAL_NUTRIENTS"
   private var MENSTRUATION_DATA = "MENSTRUATION_DATA"
 
-  private var iso8601DateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
+  private var iso8601DateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
 
   val workoutTypeMap = mapOf(
     "AEROBICS" to FitnessActivities.AEROBICS,

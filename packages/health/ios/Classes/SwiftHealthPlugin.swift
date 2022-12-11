@@ -371,10 +371,10 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     }
     
     private func strFrom(date: Date) -> String {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
-        dateFormatter.calendar = Calendar.init(identifier: .gregorian)
-        return dateFormatter.string(from: date)
+        // see https://www.advancedswift.com/local-utc-date-format-swift/
+        let localISOFormatter = ISO8601DateFormatter()
+        localISOFormatter.timeZone = TimeZone.current
+        return localISOFormatter.string(from: date)
     }
     
     private func jsonValueFrom(key: String, value: Any?) -> [String: Any]? {
