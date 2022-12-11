@@ -371,14 +371,10 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     }
     
     private func strFrom(date: Date) -> String {
-        if #available(iOS 15.0, *) {
-            return date.ISO8601Format()
-        } else {
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
-            dateFormatter.calendar = Calendar.init(identifier: .gregorian)
-            return dateFormatter.string(from: date)
-        };
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
+        dateFormatter.calendar = Calendar.init(identifier: .gregorian)
+        return dateFormatter.string(from: date)
     }
     
     private func jsonValueFrom(key: String, value: Any?) -> [String: Any]? {
@@ -395,9 +391,14 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     
     func getData(call: FlutterMethodCall, result: @escaping FlutterResult) {
         let arguments = call.arguments as? NSDictionary
-        let dataTypeKey = (arguments?["dataTypeKey"] as? String)!
         let dataUnitKey = (arguments?["dataUnitKey"] as? String)
         let limit = (arguments?["limit"] as? Int) ?? HKObjectQueryNoLimit
+        
+        guard let dataTypeKey = (arguments?["dataTypeKey"] as? String) else {
+            SwiftHealthPlugin.logStreamHandler.sendError("dataTypeKey is missing from getData request")
+            result(nil)
+            return
+        }
         
         guard let startTime = (arguments?["startTimeSec"] as? NSNumber),
                 let endTime = (arguments?["endTimeSec"] as? NSNumber) else {
@@ -420,7 +421,12 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             
             switch samplesOrNil {
             case let (samples as [HKQuantitySample]) as Any:
-                let unit = unitDict[dataUnitKey!]
+                guard let dataUnitKey = dataUnitKey else {
+                    SwiftHealthPlugin.logStreamHandler.sendError("dataUnitKey is missing from getData request")
+                    result(nil)
+                    return
+                }
+                let unit = unitDict[dataUnitKey]
                 let dictionaries = samples.map { sample -> NSDictionary in
                     return [
                         "uuid": "\(sample.uuid)",
@@ -472,8 +478,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                                     "workoutActivityType": sample.workoutActivityType.rawValue,
                                     "startDate": strFrom(date: sample.startDate),
                                     "endDate": strFrom(date: sample.endDate),
-                                    "source_id": sample.sourceRevision.source.bundleIdentifier,
-                                    "source_name": sample.sourceRevision.source.name]
+                                    "sourceBundleIdentifier": sample.sourceRevision.source.bundleIdentifier,
+                                    "sourceName": sample.sourceRevision.source.name]
                     if let workoutActivityType = workoutActivityTypeMap.first(where: {$0.value == sample.workoutActivityType})?.key {
                         workout["workoutActivityType"] = workoutActivityType
                     }
