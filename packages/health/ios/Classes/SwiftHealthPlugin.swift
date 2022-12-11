@@ -381,20 +381,16 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         };
     }
     
-    private func jsonValueFrom(value: Any?) -> Any? {
+    private func jsonValueFrom(key: String, value: Any?) -> [String: Any]? {
+        guard let value = value else {return nil}
+        
         // we might have a metadata value that is not serializeble into json
+        // We cannot check NSInvalidArgumentException in Swift. Might have to
+        // write a ObjC code for that. See:
+        // https://stackoverflow.com/a/43586083
+        // So, for now we just retun the string representation of the value
         
-        let dummyKey = "value"
-        guard let value = value else {return false}
-            
-        do {
-            var data = try JSONSerialization.data(withJSONObject: [dummyKey: value])
-            let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String : Any]
-            return json?[dummyKey]
-        } catch {
-            return nil
-        }
-        
+        return [key : "\(value)"]
     }
     
     func getData(call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -487,10 +483,11 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                     if let totalDistance = sample.totalDistance?.doubleValue(for: HKUnit.meter()) {
                         workout["totalDistance"] = totalDistance
                     }
+
                     if let metadata = sample.metadata {
-                        var metadataVal = [:]
+                        var metadataVal: [String: Any] = [:]
                         metadata.keys.forEach { key in
-                            if let value = jsonValueFrom(value: metadata[key]) {
+                            if let jsonForKey = jsonValueFrom(key: key, value: metadata[key]), let value = jsonForKey[key] {
                                 metadataVal[key] = value
                             }
                         }
