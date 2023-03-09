@@ -1,4 +1,4 @@
-package com.metaflow.lumen_tng.app
+package com.metaflow.science.app
 
 import android.os.Bundle
 

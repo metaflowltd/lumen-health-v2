@@ -40,7 +40,7 @@ class _HealthAppState extends State<HealthApp> {
 
     // define the types to get
     final types = [
-      // HealthDataType.TOTAL_NUTRIENTS,
+      // HealthDataType.DIETARY_CARBS_CONSUMED,
       // HealthDataType.DIETARY_FATS_CONSUMED,
       // HealthDataType.DIETARY_PROTEIN_CONSUMED,
       // HealthDataType.MENSTRUATION_DATA,
@@ -48,17 +48,17 @@ class _HealthAppState extends State<HealthApp> {
       // HealthDataType.HEIGHT,
       // HealthDataType.BLOOD_GLUCOSE,
       HealthDataType.WORKOUT,
-      HealthDataType.SLEEP,
+      // HealthDataType.SLEEP,
       // Uncomment these lines on iOS - only available on iOS
       // HealthDataType.AUDIOGRAM,
-      HealthDataType.STEPS,
+      // HealthDataType.STEPS,
     ];
 
     // with coresponsing permissions
     final permissions = [
       // HealthDataAccess.READ,
-      HealthDataAccess.READ,
-      HealthDataAccess.READ,
+      // HealthDataAccess.READ,
+      // HealthDataAccess.READ,
       HealthDataAccess.READ,
       // HealthDataAccess.READ,
       // HealthDataAccess.READ,
@@ -71,7 +71,7 @@ class _HealthAppState extends State<HealthApp> {
 
     // get data within the last 24 hours
     final now = DateTime.now();
-    final yesterday = now.subtract(Duration(days: 10));
+    final yesterday = now.subtract(Duration(days: 20));
     // requesting access to the data types before reading them
     // note that strictly speaking, the [permissions] are not
     // needed, since we only want READ access.
