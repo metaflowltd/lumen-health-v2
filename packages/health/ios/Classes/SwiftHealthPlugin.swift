@@ -430,9 +430,9 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                 let dictionaries = samples.map { sample -> NSDictionary in
                     return [
                         "uuid": "\(sample.uuid)",
-                        "doubleValue": sample.quantity.doubleValue(for: unit!),
-                        "startDate": strFrom(date: sample.startDate),
-                        "endDate": strFrom(date: sample.endDate),
+                        "value": sample.quantity.doubleValue(for: unit!),
+                        "startTime": strFrom(date: sample.startDate),
+                        "endTime": strFrom(date: sample.endDate),
                         "sourceBundleIdentifier": sample.sourceRevision.source.bundleIdentifier,
                         "sourceName": sample.sourceRevision.source.name
                     ]
@@ -461,8 +461,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                     return [
                         "uuid": "\(sample.uuid)",
                         "value": sample.value,
-                        "startDate": strFrom(date: sample.startDate),
-                        "endDate": strFrom(date: sample.endDate),
+                        "startTime": strFrom(date: sample.startDate),
+                        "endTime": strFrom(date: sample.endDate),
                         "sourceBundleIdentifier": sample.sourceRevision.source.bundleIdentifier,
                         "sourceName": sample.sourceRevision.source.name
                     ]
@@ -476,8 +476,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                 let dictionaries = samplesWorkout.map { sample -> [String: Any] in
                     var workout: [String: Any] = [ "uuid": "\(sample.uuid)",
                                     "workoutActivityType": sample.workoutActivityType.rawValue,
-                                    "startDate": strFrom(date: sample.startDate),
-                                    "endDate": strFrom(date: sample.endDate),
+                                    "startTime": strFrom(date: sample.startDate),
+                                    "endTime": strFrom(date: sample.endDate),
                                     "sourceBundleIdentifier": sample.sourceRevision.source.bundleIdentifier,
                                     "sourceName": sample.sourceRevision.source.name]
                     if let workoutActivityType = workoutActivityTypeMap.first(where: {$0.value == sample.workoutActivityType})?.key {
@@ -487,7 +487,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                         workout["totalEnergyBurned"] = totalEnergyBurned
                     }
                     if let totalDistance = sample.totalDistance?.doubleValue(for: HKUnit.meter()) {
-                        workout["totalDistance"] = totalDistance
+                        workout["totalDistance"] = totalDistance / 1000
                     }
 
                     if let metadata = sample.metadata {
@@ -522,8 +522,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                         "frequencies": frequencies,
                         "leftEarSensitivities": leftEarSensitivities,
                         "rightEarSensitivities": rightEarSensitivities,
-                        "startDate": strFrom(date: sample.startDate),
-                        "endDate": strFrom(date: sample.endDate),
+                        "startTime": strFrom(date: sample.startDate),
+                        "endTime": strFrom(date: sample.endDate),
                         "sourceBundleIdentifier": sample.sourceRevision.source.bundleIdentifier,
                         "sourceName": sample.sourceRevision.source.name
                     ]
