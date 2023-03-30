@@ -7,10 +7,12 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     
     let healthStore = HKHealthStore()
     var healthDataTypes = [HKSampleType]()
+    var characteristicsDataTypes = [HKCharacteristicType]()
     var heartRateEventTypes = Set<HKSampleType>()
     var headacheType = Set<HKSampleType>()
     var allDataTypes = Set<HKSampleType>()
     var dataTypesDict: [String: HKSampleType] = [:]
+    var characteristicsTypesDict: [String: HKCharacteristicType] = [:]
     var unitDict: [String: HKUnit] = [:]
     var workoutActivityTypeMap: [String: HKWorkoutActivityType] = [:]
     
@@ -39,6 +41,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     let IRREGULAR_HEART_RATE_EVENT = "IRREGULAR_HEART_RATE_EVENT"
     let LOW_HEART_RATE_EVENT = "LOW_HEART_RATE_EVENT"
     let RESTING_HEART_RATE = "RESTING_HEART_RATE"
+    let BIRTH_DATE = "BIRTH_DATE"
+    let GENDER = "GENDER"
     let STEPS = "STEPS"
     let WAIST_CIRCUMFERENCE = "WAIST_CIRCUMFERENCE"
     let WALKING_HEART_RATE = "WALKING_HEART_RATE"
@@ -180,19 +184,27 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         }
         
         for (index, type) in types.enumerated() {
-            let sampleType = dataTypeLookUp(key: type)
-            let success = hasPermission(type: sampleType, access: permissions[index])
-            if (success == nil || success == false) {
-                result(success)
-                return
+            if let sampleType = dataTypesDict[type] {
+                let success = hasPermission(type: sampleType, access: permissions[index])
+                if (success == nil || success == false) {
+                    result(success)
+                    return
+                }
+            }
+            if let characteristicType = characteristicsTypesDict[type]{
+                let success = hasPermission(type: characteristicType, access: permissions[index])
+                if (success == nil || success == false) {
+                    result(success)
+                    return
+                }
             }
         }
         
-        result(true)
+        result(false)
     }
     
     
-    func hasPermission(type: HKSampleType, access: Int) -> Bool? {
+    func hasPermission(type: HKObjectType, access: Int) -> Bool? {
         
         if #available(iOS 13.0, *) {
             let status = healthStore.authorizationStatus(for: type)
@@ -220,19 +232,30 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         }
         
         
-        var typesToRead = Set<HKSampleType>()
+        var typesToRead = Set<HKObjectType>()
         var typesToWrite = Set<HKSampleType>()
         for (index, key) in types.enumerated() {
-            let dataType = dataTypeLookUp(key: key)
-            let access = permissions[index]
-            switch access {
-            case 0:
-                typesToRead.insert(dataType)
-            case 1:
-                typesToWrite.insert(dataType)
-            default:
-                typesToRead.insert(dataType)
-                typesToWrite.insert(dataType)
+            if let dataType = dataTypesDict[key]{
+                let access = permissions[index]
+                switch access {
+                case 0:
+                    typesToRead.insert(dataType)
+                case 1:
+                    typesToWrite.insert(dataType)
+                default:
+                    break
+                }
+            }
+            if let characteristicsType = characteristicsTypesDict[key]{
+                let access = permissions[index]
+                switch access {
+                case 0:
+                    typesToRead.insert(characteristicsType)
+                case 1:
+                    throw PluginError(message: "Can not ask for writing permissions to the type of \(characteristicsType)")
+                default:
+                    break
+                }
             }
         }
         
@@ -265,11 +288,11 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         let sample: HKObject
         
         if (unitLookUp(key: type) == HKUnit.init(from: "")) {
-            sample = HKCategorySample(type: dataTypeLookUp(key: type) as! HKCategoryType, value: Int(value), start: dateFrom, end: dateTo)
+            sample = HKCategorySample(type: dataTypesDict[type] as! HKCategoryType, value: Int(value), start: dateFrom, end: dateTo)
         } else {
             let quantity = HKQuantity(unit: unitDict[unit]!, doubleValue: value)
             
-            sample = HKQuantitySample(type: dataTypeLookUp(key: type) as! HKQuantityType, quantity: quantity, start: dateFrom, end: dateTo)
+            sample = HKQuantitySample(type: dataTypesDict[type] as! HKQuantityType, quantity: quantity, start: dateFrom, end: dateTo)
         }
         
         HKHealthStore().save(sample, withCompletion: { (success, error) in
@@ -400,6 +423,23 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             return
         }
         
+        switch(dataTypeKey){
+        case BIRTH_DATE:
+            let dateOfBirth = getDOB()
+            result([
+                ["value": dateOfBirth?.timeIntervalSince1970]
+            ])
+            return
+        case GENDER:
+            let gender = getBioLogicalSex()
+            result([
+                ["value": gender?.rawValue]
+            ])
+            return
+        default:
+            break
+        }
+        
         guard let startTime = (arguments?["startTimeSec"] as? NSNumber),
                 let endTime = (arguments?["endTimeSec"] as? NSNumber) else {
             SwiftHealthPlugin.logStreamHandler.sendError("start time or end time are missing from getData request")
@@ -411,7 +451,13 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         let dateFrom = Date(timeIntervalSince1970: startTime.doubleValue)
         let dateTo = Date(timeIntervalSince1970: endTime.doubleValue)
         
-        let dataType = dataTypeLookUp(key: dataTypeKey)
+        guard let dataType = dataTypesDict[dataTypeKey] else {
+            SwiftHealthPlugin.logStreamHandler.sendError("Can not find dataType \(dataTypeKey) in the available data types")
+            DispatchQueue.main.async {
+                result(nil)
+            }
+            return
+        }
         
         let predicate = HKQuery.predicateForSamples(withStart: dateFrom, end: dateTo, options: .strictStartDate)
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
@@ -595,11 +641,24 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         return unit
     }
     
-    func dataTypeLookUp(key: String) -> HKSampleType {
-        guard let dataType_ = dataTypesDict[key] else {
-            return HKSampleType.quantityType(forIdentifier: .bodyMass)!
+    func getBioLogicalSex() -> HKBiologicalSex? {
+        var bioSex:HKBiologicalSex?
+        do {
+            bioSex = try self.healthStore.biologicalSex().biologicalSex
+        } catch _{
+            bioSex = nil
         }
-        return dataType_
+        return bioSex
+    }
+    
+    func getDOB() -> Date?{
+        var dob:Date?
+        do {
+          dob = try self.healthStore.dateOfBirthComponents().date
+        } catch _{
+          dob = nil
+        }
+        return dob
     }
     
     func initializeTypes() {
@@ -673,7 +732,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         workoutActivityTypeMap["FLEXIBILITY"] = .flexibility
         workoutActivityTypeMap["WALKING"] = .walking
         workoutActivityTypeMap["RUNNING"] = .running
-        workoutActivityTypeMap["RUNNING_JOGGING"] = .running // Supported due to combining with Android naming 
+        workoutActivityTypeMap["RUNNING_JOGGING"] = .running // Supported due to combining with Android naming
         workoutActivityTypeMap["RUNNING_SAND"] = .running // Supported due to combining with Android naming
         workoutActivityTypeMap["RUNNING_TREADMILL"] = .running // Supported due to combining with Android naming
         workoutActivityTypeMap["WHEELCHAIR_WALK_PACE"] = .wheelchairWalkPace
@@ -769,8 +828,11 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             dataTypesDict[SLEEP] = HKSampleType.categoryType(forIdentifier: .sleepAnalysis)!
             dataTypesDict[EXERCISE_TIME] = HKSampleType.quantityType(forIdentifier: .appleExerciseTime)!
             dataTypesDict[WORKOUT] = HKSampleType.workoutType()
-            
             healthDataTypes = Array(dataTypesDict.values)
+            
+            characteristicsTypesDict[BIRTH_DATE] = HKObjectType.characteristicType(forIdentifier: .dateOfBirth)!
+            characteristicsTypesDict[GENDER] = HKObjectType.characteristicType(forIdentifier: .biologicalSex)!
+            characteristicsDataTypes = Array(characteristicsTypesDict.values)
         }
         // Set up heart rate data types specific to the apple watch, requires iOS 12
         if #available(iOS 12.2, *){
