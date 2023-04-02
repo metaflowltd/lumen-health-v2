@@ -23,6 +23,8 @@ enum HealthDataType {
   HEIGHT,
   RESTING_HEART_RATE,
   STEPS,
+  GENDER,
+  BIRTH_DATE,
   WAIST_CIRCUMFERENCE,
   WALKING_HEART_RATE,
   WEIGHT,
@@ -110,6 +112,8 @@ const List<HealthDataType> _dataTypeKeysIOS = [
   HealthDataType.HEADACHE_SEVERE,
   HealthDataType.HEADACHE_UNSPECIFIED,
   HealthDataType.MENSTRUATION_DATA,
+  HealthDataType.BIRTH_DATE,
+  HealthDataType.GENDER,
 ];
 
 /// List of data types available on Android
@@ -184,6 +188,8 @@ const Map<HealthDataType, HealthDataUnit> _dataTypeToUnit = {
   HealthDataType.IRREGULAR_HEART_RATE_EVENT: HealthDataUnit.NO_UNIT,
   HealthDataType.HEART_RATE_VARIABILITY_SDNN: HealthDataUnit.MILLISECOND,
   HealthDataType.TOTAL_NUTRIENTS: HealthDataUnit.NO_UNIT,
+  HealthDataType.GENDER: HealthDataUnit.NO_UNIT,
+  HealthDataType.BIRTH_DATE: HealthDataUnit.NO_UNIT,
 };
 
 const PlatformTypeJsonValue = {
