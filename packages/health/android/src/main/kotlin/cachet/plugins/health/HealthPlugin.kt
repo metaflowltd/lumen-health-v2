@@ -40,7 +40,7 @@ const val MMOLL_2_MGDL = 18.0 // 1 mmoll= 18 mgdl
 class HealthPlugin(private var channel: MethodChannel? = null) : MethodCallHandler,
   EventChannel.StreamHandler,
   ActivityResultListener, Result, ActivityAware, FlutterPlugin {
-  private var result: Result? = null
+  private var mResult: Result? = null
   private var handler: Handler? = null
   private var activity: Activity? = null
   private var threadPoolExecutor: ExecutorService? = null
@@ -236,17 +236,17 @@ class HealthPlugin(private var channel: MethodChannel? = null) : MethodCallHandl
 
 
   override fun success(p0: Any?) {
-    handler?.post { result?.success(p0) }
+    handler?.post { mResult?.success(p0) }
   }
 
   override fun notImplemented() {
-    handler?.post { result?.notImplemented() }
+    handler?.post { mResult?.notImplemented() }
   }
 
   override fun error(
     errorCode: String, errorMessage: String?, errorDetails: Any?
   ) {
-    handler?.post { result?.error(errorCode, errorMessage, errorDetails) }
+    handler?.post { mResult?.error(errorCode, errorMessage, errorDetails) }
   }
 
 
@@ -262,8 +262,6 @@ class HealthPlugin(private var channel: MethodChannel? = null) : MethodCallHandl
     }
     return false
   }
-
-  private var mResult: Result? = null
 
   private fun keyToHealthDataType(type: String): DataType {
     return when (type) {
@@ -604,17 +602,6 @@ class HealthPlugin(private var channel: MethodChannel? = null) : MethodCallHandl
             android.Manifest.permission.ACCESS_FINE_LOCATION
           ) == PackageManager.PERMISSION_GRANTED
         ) {
-          // Request permission with distance data.
-          // Google Fit requires this when we query for distance data
-          // as it is restricted data
-          if (!GoogleSignIn.hasPermissions(googleSignInAccount, fitnessOptions)) {
-            GoogleSignIn.requestPermissions(
-              activity!!, // your activity
-              GOOGLE_FIT_PERMISSIONS_REQUEST_CODE,
-              googleSignInAccount,
-              fitnessOptions
-            )
-          }
           readRequestBuilder.read(DataType.TYPE_DISTANCE_DELTA)
         }
         readRequest = readRequestBuilder.build()
@@ -790,7 +777,7 @@ class HealthPlugin(private var channel: MethodChannel? = null) : MethodCallHandl
         }
         else -> throw IllegalArgumentException("Unknown access type $access")
       }
-      if (typeKey == SLEEP || typeKey == WORKOUT) {
+      if (typeKey == SLEEP) {
         typesBuilder.accessSleepSessions(FitnessOptions.ACCESS_READ)
         when (access) {
           0 -> typesBuilder.accessSleepSessions(FitnessOptions.ACCESS_READ)
@@ -798,6 +785,17 @@ class HealthPlugin(private var channel: MethodChannel? = null) : MethodCallHandl
           2 -> {
             typesBuilder.accessSleepSessions(FitnessOptions.ACCESS_READ)
             typesBuilder.accessSleepSessions(FitnessOptions.ACCESS_WRITE)
+          }
+          else -> throw IllegalArgumentException("Unknown access type $access")
+        }
+      }
+      if (typeKey == WORKOUT) {
+        when (access) {
+          0 -> typesBuilder.accessActivitySessions(FitnessOptions.ACCESS_READ)
+          1 -> typesBuilder.accessActivitySessions(FitnessOptions.ACCESS_WRITE)
+          2 -> {
+            typesBuilder.accessActivitySessions(FitnessOptions.ACCESS_READ)
+            typesBuilder.accessActivitySessions(FitnessOptions.ACCESS_WRITE)
           }
           else -> throw IllegalArgumentException("Unknown access type $access")
         }
@@ -815,14 +813,13 @@ class HealthPlugin(private var channel: MethodChannel? = null) : MethodCallHandl
     }
 
     val optionsToRegister = callToHealthTypes(call)
-    mResult = result
 
     val isGranted = GoogleSignIn.hasPermissions(
       GoogleSignIn.getLastSignedInAccount(activity!!),
       optionsToRegister
     )
 
-    mResult?.success(isGranted)
+    result.success(isGranted)
   }
 
   /// Called when the "requestAuthorization" is invoked from Flutter
@@ -839,7 +836,7 @@ class HealthPlugin(private var channel: MethodChannel? = null) : MethodCallHandl
       GoogleSignIn.getLastSignedInAccount(activity!!),
       optionsToRegister
     )
-    /// Not granted? Ask for permission
+    // If not granted then ask for permission
     if (!isGranted && activity != null) {
       GoogleSignIn.requestPermissions(
         activity!!,
@@ -847,11 +844,32 @@ class HealthPlugin(private var channel: MethodChannel? = null) : MethodCallHandl
         GoogleSignIn.getLastSignedInAccount(activity!!),
         optionsToRegister
       )
+    } else { /// Permission already granted
+      result.success(true)
     }
-    /// Permission already granted
-    else {
-      mResult?.success(true)
+  }
+  /**
+   * Revokes access to Google Fit using the `disableFit`-method.
+   *
+   * Note: Using the `revokeAccess` creates a bug on android
+   * when trying to reapply for permissions afterwards, hence
+   * `disableFit` was used.
+   */
+  private fun revokePermissions(call: MethodCall, result: Result) {
+    if (activity == null) {
+      result.success(false)
+      return
     }
+    Fitness.getConfigClient(activity!!, GoogleSignIn.getLastSignedInAccount(activity!!)!!)
+      .disableFit()
+      .addOnSuccessListener {
+        Log.i("Health","Disabled Google Fit")
+        result.success(true)
+      }
+      .addOnFailureListener { e ->
+        Log.w("Health", "There was an error disabling Google Fit", e)
+        result.success(false)
+      }
   }
 
   private fun getTotalStepsInInterval(call: MethodCall, result: Result) {
@@ -936,6 +954,7 @@ class HealthPlugin(private var channel: MethodChannel? = null) : MethodCallHandl
   override fun onMethodCall(call: MethodCall, result: Result) {
     when (call.method) {
       "requestAuthorization" -> requestAuthorization(call, result)
+      "revokePermissions" -> revokePermissions(call, result)
       "getData" -> getData(call, result)
       "writeData" -> writeData(call, result)
       "getTotalStepsInInterval" -> getTotalStepsInInterval(call, result)
