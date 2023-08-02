@@ -517,7 +517,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                     result(categories)
                 }
                 
-            case let (samplesWorkout as [HKWorkout]) as Any:
+            case let (samplesWorkout as [HKWorkout]):
                 
                 let dictionaries = samplesWorkout.map { sample -> [String: Any] in
                     var workout: [String: Any] = [ "uuid": "\(sample.uuid)",
@@ -526,6 +526,15 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                                     "endTime": strFrom(date: sample.endDate),
                                     "sourceBundleIdentifier": sample.sourceRevision.source.bundleIdentifier,
                                     "sourceName": sample.sourceRevision.source.name]
+
+                    if #available(iOS 16.0, *) {
+                        /// Here we get all statistics
+                        let statistics = sample.allStatistics
+                        workout["allStatistics"] = statistics
+
+                        /// Still we need to get specific quantity for and retrieve tha data like here
+                        statistics[.quantityType(forIdentifier: .activeEnergyBurned)!]?.sumQuantity()
+                    }
                     if let workoutActivityType = workoutActivityTypeMap.first(where: {$0.value == sample.workoutActivityType})?.key {
                         workout["workoutActivityType"] = workoutActivityType
                     }
