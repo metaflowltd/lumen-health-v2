@@ -32,8 +32,6 @@ internal const val WORKOUT = "WORKOUT"
 internal const val TOTAL_NUTRIENTS = "TOTAL_NUTRIENTS"
 internal const val MENSTRUATION_DATA = "MENSTRUATION_DATA"
 
-
-const val HEALTH_CONNECT_REQUEST_CODE = 16969
 const val GOOGLE_FIT_PERMISSIONS_REQUEST_CODE = 1111
 
 const val CHANNEL_NAME = "flutter_health"

@@ -69,11 +69,9 @@ class _HealthAppState extends State<HealthApp> {
     await Permission.location.request();
 
     // Check if we have permission
-    bool? hasPermissions = await health.hasPermissions(types, permissions: permissions);
-
-    // hasPermissions = false because the hasPermission cannot disclose if WRITE access exists.
+    // hasPermissions is set to default false, because the hasPermission cannot disclose if WRITE access exists.
     // Hence, we have to request with WRITE as well.
-    hasPermissions = false;
+    bool hasPermissions = await health.hasPermissions(types, permissions: permissions) ?? false;
 
     bool authorized = false;
     if (!hasPermissions) {

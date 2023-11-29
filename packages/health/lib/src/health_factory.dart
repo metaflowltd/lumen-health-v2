@@ -16,13 +16,11 @@ class HealthFactory {
   String? _deviceId;
   final _deviceInfo = DeviceInfoPlugin();
   HealthLogger? _logger;
-  late bool _useHealthConnectIfAvailable;
 
   static PlatformType _platformType = Platform.isAndroid ? PlatformType.ANDROID : PlatformType.IOS;
 
   HealthFactory({bool useHealthConnectIfAvailable = false}) {
-    _useHealthConnectIfAvailable = useHealthConnectIfAvailable;
-    if (_useHealthConnectIfAvailable) _channel.invokeMethod('useHealthConnectIfAvailable');
+    if (useHealthConnectIfAvailable) _channel.invokeMethod('useHealthConnectIfAvailable');
   }
 
   /// Check if a given data type is available on the platform
@@ -145,12 +143,12 @@ class HealthFactory {
         final type = types[i];
         final permission = permissions[i];
         if ((type == HealthDataType.ELECTROCARDIOGRAM ||
-            type == HealthDataType.HIGH_HEART_RATE_EVENT ||
-            type == HealthDataType.LOW_HEART_RATE_EVENT ||
-            type == HealthDataType.IRREGULAR_HEART_RATE_EVENT ||
-            type == HealthDataType.WALKING_HEART_RATE) &&
+                type == HealthDataType.HIGH_HEART_RATE_EVENT ||
+                type == HealthDataType.LOW_HEART_RATE_EVENT ||
+                type == HealthDataType.IRREGULAR_HEART_RATE_EVENT ||
+                type == HealthDataType.WALKING_HEART_RATE) &&
             permission != HealthDataAccess.READ) {
-          throw ArgumentError(
+          throw HealthException(type,
               'Requesting WRITE permission on ELECTROCARDIOGRAM / HIGH_HEART_RATE_EVENT / LOW_HEART_RATE_EVENT / IRREGULAR_HEART_RATE_EVENT / WALKING_HEART_RATE is not allowed.');
         }
       }

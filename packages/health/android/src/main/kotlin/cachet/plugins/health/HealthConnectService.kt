@@ -759,11 +759,8 @@ class HealthConnectService {
                 }
             }
         }
-//        val contract = PermissionController.createRequestPermissionResultContract()
-//        val intent = contract.createIntent(activity, permList.toSet())
-//        activity.startActivityForResult(intent, HEALTH_CONNECT_REQUEST_CODE)
 
-        healthConnectRequestPermissionsLauncher?.launch(permList.toSet());
+        healthConnectRequestPermissionsLauncher?.launch(permList.toSet())
     }
 
     private fun convertRecord(record: Any, dataType: String): List<Map<String, Any>> {
