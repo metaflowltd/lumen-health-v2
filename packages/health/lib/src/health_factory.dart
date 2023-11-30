@@ -19,6 +19,10 @@ class HealthFactory {
 
   static PlatformType _platformType = Platform.isAndroid ? PlatformType.ANDROID : PlatformType.IOS;
 
+  HealthFactory({bool useHealthConnectIfAvailable = false}) {
+    if (useHealthConnectIfAvailable) _channel.invokeMethod('useHealthConnectIfAvailable');
+  }
+
   /// Check if a given data type is available on the platform
   bool isDataTypeAvailable(HealthDataType dataType) => _platformType == PlatformType.ANDROID
       ? _dataTypeKeysAndroid.contains(dataType)
@@ -67,7 +71,7 @@ class HealthFactory {
   ///   with a READ or READ_WRITE access.
   ///
   ///   On Android, this function returns true or false, depending on whether the specified access right has been granted.
-  static Future<bool?> hasPermissions(List<HealthDataType> types, {List<HealthDataAccess>? permissions}) async {
+  Future<bool?> hasPermissions(List<HealthDataType> types, {List<HealthDataAccess>? permissions}) async {
     if (permissions != null && permissions.length != types.length)
       throw ArgumentError("The lists of types and permissions must be of same length.");
 
@@ -88,9 +92,18 @@ class HealthFactory {
   /// Revokes permissions of all types.
   /// Uses `disableFit()` on Google Fit.
   ///
-  /// Not supported on iOS
+  /// Not implemented on iOS as there is no way to programmatically remove access.
   Future<void> revokePermissions() async {
-    return await _channel.invokeMethod('revokePermissions');
+    try {
+      if (_platformType == PlatformType.IOS) {
+        throw UnsupportedError(
+            'Revoke permissions is not supported on iOS. Please revoke permissions manually in the settings.');
+      }
+      await _channel.invokeMethod('revokePermissions');
+      return;
+    } catch (e) {
+      print(e);
+    }
   }
 
   /// Requests permissions to access data types in Apple Health or Google Fit.
@@ -122,6 +135,22 @@ class HealthFactory {
       // If not implemented on platform, throw an exception
       if (!isDataTypeAvailable(dataType)) {
         throw HealthException(dataType, 'Not available on platform $_platformType');
+      }
+    }
+
+    if (permissions != null) {
+      for (int i = 0; i < types.length; i++) {
+        final type = types[i];
+        final permission = permissions[i];
+        if ((type == HealthDataType.ELECTROCARDIOGRAM ||
+                type == HealthDataType.HIGH_HEART_RATE_EVENT ||
+                type == HealthDataType.LOW_HEART_RATE_EVENT ||
+                type == HealthDataType.IRREGULAR_HEART_RATE_EVENT ||
+                type == HealthDataType.WALKING_HEART_RATE) &&
+            permission != HealthDataAccess.READ) {
+          throw HealthException(type,
+              'Requesting WRITE permission on ELECTROCARDIOGRAM / HIGH_HEART_RATE_EVENT / LOW_HEART_RATE_EVENT / IRREGULAR_HEART_RATE_EVENT / WALKING_HEART_RATE is not allowed.');
+        }
       }
     }
 
@@ -210,7 +239,9 @@ class HealthFactory {
 
     // Align values to type in cases where the type defines the value.
     // E.g. SLEEP_IN_BED should have value 0
-    if (type == HealthDataType.SLEEP ||
+    if (type == HealthDataType.SLEEP_ASLEEP ||
+        type == HealthDataType.SLEEP_AWAKE ||
+        type == HealthDataType.SLEEP_IN_BED ||
         type == HealthDataType.HEADACHE_NOT_PRESENT ||
         type == HealthDataType.HEADACHE_MILD ||
         type == HealthDataType.HEADACHE_MODERATE ||
@@ -227,6 +258,28 @@ class HealthFactory {
       'endTimeSec': endTime.millisecondsSinceEpoch ~/ 1000,
     };
     bool? success = await _channel.invokeMethod('writeData', args);
+    return success ?? false;
+  }
+
+  /// Deletes all records of the given type for a given period of time
+  ///
+  /// Returns true if successful, false otherwise.
+  ///
+  /// Parameters:
+  /// * [type] - the value's HealthDataType
+  /// * [startTime] - the start time when this [value] is measured.
+  ///   + It must be equal to or earlier than [endTime].
+  /// * [endTime] - the end time when this [value] is measured.
+  ///   + It must be equal to or later than [startTime].
+  Future<bool> delete(HealthDataType type, DateTime startTime, DateTime endTime) async {
+    if (startTime.isAfter(endTime)) throw ArgumentError("startTime must be equal or earlier than endTime");
+
+    Map<String, dynamic> args = {
+      'dataTypeKey': type.name,
+      'startTimeSec': startTime.millisecondsSinceEpoch ~/ 1000,
+      'endTimeSec': endTime.millisecondsSinceEpoch ~/ 1000,
+    };
+    bool? success = await _channel.invokeMethod('delete', args);
     return success ?? false;
   }
 
@@ -348,10 +401,19 @@ class HealthFactory {
     return stepsCount;
   }
 
+  /// Assigns numbers to specific [HealthDataType]s.
   int _alignValue(HealthDataType type) {
     switch (type) {
-      case HealthDataType.SLEEP:
+      case HealthDataType.SLEEP_IN_BED:
         return 0;
+      case HealthDataType.SLEEP_ASLEEP:
+        return 1;
+      case HealthDataType.SLEEP_AWAKE:
+        return 2;
+      case HealthDataType.SLEEP_DEEP:
+        return 3;
+      case HealthDataType.SLEEP_REM:
+        return 4;
       case HealthDataType.HEADACHE_UNSPECIFIED:
         return 0;
       case HealthDataType.HEADACHE_NOT_PRESENT:
@@ -406,6 +468,12 @@ class HealthFactory {
     };
     final success = await _channel.invokeMethod('writeWorkoutData', args);
     return success ?? false;
+  }
+
+  /// Given an array of [HealthDataPoint]s, this method will return the array
+  /// without any duplicates.
+  static List<HealthDataPoint> removeDuplicates(List<HealthDataPoint> points) {
+    return LinkedHashSet.of(points).toList();
   }
 
   /// Check if the given [HealthWorkoutActivityType] is supported on the iOS platform
