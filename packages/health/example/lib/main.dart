@@ -99,7 +99,7 @@ class _HealthAppState extends State<HealthApp> {
 
     try {
       // fetch health data
-      List<HealthDataPoint> healthData = await health.getHealthDataFromTypes(yesterday, now, types);
+      List<HealthDataPoint> healthData = await health.getHealthDataFromTypes(yesterday, now, types, false);
       // save all the new data points (only the first 100)
       _healthDataList.addAll((healthData.length < 100) ? healthData : healthData.sublist(0, 100));
     } catch (error) {
