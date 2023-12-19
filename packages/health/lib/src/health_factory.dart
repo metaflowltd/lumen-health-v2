@@ -437,7 +437,7 @@ class HealthFactory {
       }
     }
     processing = false;
-    _processRequests();
+    await _processRequests();
   }
 
   /// Method accepting range of times, and returns a pairs of start and end times for each hour in the range.
