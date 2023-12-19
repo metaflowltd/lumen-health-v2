@@ -343,12 +343,12 @@ class HealthFactory {
   }
 
   /// Fetch a list of health data points based on [types].
-  Future<List<HealthDataPoint>> getHealthDataFromTypes(
-    DateTime startTime,
-    DateTime endTime,
-    List<HealthDataType> types,
-    bool isPriorityQueue,
-  ) async {
+  Future<List<HealthDataPoint>> getHealthDataFromTypes({
+    required DateTime startTime,
+    required DateTime endTime,
+    required List<HealthDataType> types,
+    required bool isPriorityQueue,
+  }) async {
     List<HealthDataPoint> dataPoints = [];
 
     for (var type in types) {
@@ -384,13 +384,8 @@ class HealthFactory {
   /// The main function for fetching health data
   Future<List<HealthDataPoint>> _dataQuery(
       DateTime startTime, DateTime endTime, HealthDataType dataType, bool isPriorityQueue) async {
-    Completer<List<HealthDataPoint>> _completer = new Completer();
-
+    final _completer = new Completer<List<HealthDataPoint>>();
     final hours = _divideDateRangeIntoHours(startTime, endTime);
-    if (hours.isEmpty) {
-      hours.add(Pair(startTime, endTime));
-    }
-
     final dataPointInput = DataPointInput(
       completer: _completer,
       dateRanges: hours,
@@ -419,23 +414,27 @@ class HealthFactory {
 
       final requestToProcess = requests.first;
 
-      for (var dates in requestToProcess.dateRanges) {
-        final args = <String, dynamic>{
-          'dataTypeKey': requestToProcess.type.name,
-          'dataUnitKey': _dataTypeToUnit[requestToProcess.type]!.name,
-          'startTimeSec': dates.first.millisecondsSinceEpoch ~/ 1000,
-          'endTimeSec': dates.second.millisecondsSinceEpoch ~/ 1000,
-        };
+      try {
+        for (var dates in requestToProcess.dateRanges) {
+          final args = <String, dynamic>{
+            'dataTypeKey': requestToProcess.type.name,
+            'dataUnitKey': _dataTypeToUnit[requestToProcess.type]!.name,
+            'startTimeSec': dates.first.millisecondsSinceEpoch ~/ 1000,
+            'endTimeSec': dates.second.millisecondsSinceEpoch ~/ 1000,
+          };
 
-        List<Map>? fetchedDataPoints = await _channel.invokeListMethod('getData', args);
-        if (fetchedDataPoints != null) {
-          result.addAll(_parse(dataType: requestToProcess.type, dataPoints: fetchedDataPoints));
-        } else {
-          result.addAll([]);
+          List<Map>? fetchedDataPoints = await _channel.invokeListMethod('getData', args);
+          if (fetchedDataPoints != null) {
+            result.addAll(_parse(dataType: requestToProcess.type, dataPoints: fetchedDataPoints));
+          } else {
+            result.addAll([]);
+          }
         }
-      }
 
-      requestToProcess.completer.complete(result);
+        requestToProcess.completer.complete(result);
+      } catch (e, st) {
+        requestToProcess.completer.completeError(e, st);
+      }
     }
     processing = false;
     _processRequests();
@@ -444,6 +443,7 @@ class HealthFactory {
   /// Method accepting range of times, and returns a pairs of start and end times for each hour in the range.
   /// For example, if the range is from 2021-01-01 10:00:00 to 2021-01-01 12:00:00, the method will return:
   /// [ [2021-01-01 10:00:00, 2021-01-01 11:00:00], [2021-01-01 11:00:00, 2021-01-01 12:00:00] ]
+  /// If the difference between start time and end time is less than an hour, the method will return a single
   List<Pair<DateTime, DateTime>> _divideDateRangeIntoHours(DateTime startTime, DateTime endTime) {
     final List<Pair<DateTime, DateTime>> dateHours = [];
     final int differenceInHours = endTime.difference(startTime).inHours;
@@ -451,6 +451,9 @@ class HealthFactory {
       final DateTime startHour = startTime.add(Duration(hours: i));
       final DateTime endHour = startTime.add(Duration(hours: i + 1));
       dateHours.add(Pair(startHour, endHour));
+    }
+    if (dateHours.isEmpty) {
+      dateHours.add(Pair(startTime, endTime));
     }
     return dateHours;
   }
