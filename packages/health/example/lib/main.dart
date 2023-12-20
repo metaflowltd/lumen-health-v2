@@ -95,7 +95,12 @@ class _HealthAppState extends State<HealthApp> {
     if (requested) {
       try {
         // fetch health data
-        List<HealthDataPoint> healthData = await health.getHealthDataFromTypes(yesterday, now, types);
+        List<HealthDataPoint> healthData = await health.getHealthDataFromTypes(
+          startTime: yesterday,
+          endTime: now,
+          types: types,
+          isPriorityQueue: false,
+        );
 
         // filter out duplicates
         _healthDataList.removeWhere(
