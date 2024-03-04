@@ -1,7 +1,6 @@
 library health;
 
 import 'dart:async';
-import 'dart:collection';
 import 'dart:io' show Platform;
 
 import 'package:device_info_plus/device_info_plus.dart';
