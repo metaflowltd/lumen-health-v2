@@ -1,5 +1,27 @@
 part of health;
 
+class Pair<A, B> {
+  final A first;
+  final B second;
+
+  const Pair(this.first, this.second);
+
+  @override
+  String toString() => '$runtimeType: $first, $second';
+}
+
+class DataPointInput {
+  final HealthDataType type;
+  final Completer<List<HealthDataPoint>> completer;
+  final List<Pair<DateTime, DateTime>> dateRanges;
+
+  DataPointInput({
+    required this.type,
+    required this.completer,
+    required this.dateRanges,
+  });
+}
+
 /// Main class for the Plugin.
 ///
 /// The plugin supports:
@@ -9,7 +31,6 @@ part of health;
 ///  * reading health data using the [getHealthDataFromTypes] method.
 ///  * writing health data using the [writeHealthData] method.
 ///  * accessing total step counts using the [getTotalStepsInInterval] method.
-///  * cleaning up duplicate data points via the [removeDuplicates] method.
 class HealthFactory {
   static const EventChannel _logsChannel = const EventChannel('flutter_health_logs_channel');
   static const MethodChannel _channel = MethodChannel('flutter_health');
@@ -268,15 +289,16 @@ class HealthFactory {
   }
 
   /// Fetch a list of health data points based on [types].
-  Future<List<HealthDataPoint>> getHealthDataFromTypes(
-    DateTime startTime,
-    DateTime endTime,
-    List<HealthDataType> types,
-  ) async {
+  Future<List<HealthDataPoint>> getHealthDataFromTypes({
+    required DateTime startTime,
+    required DateTime endTime,
+    required List<HealthDataType> types,
+    required bool isPriorityQueue,
+  }) async {
     List<HealthDataPoint> dataPoints = [];
 
     for (var type in types) {
-      final result = await _prepareQuery(startTime, endTime, type);
+      final result = await _prepareQuery(startTime, endTime, type, isPriorityQueue);
       dataPoints.addAll(result);
     }
 
@@ -284,7 +306,12 @@ class HealthFactory {
   }
 
   /// Prepares a query, i.e. checks if the types are available, etc.
-  Future<List<HealthDataPoint>> _prepareQuery(DateTime startTime, DateTime endTime, HealthDataType dataType) async {
+  Future<List<HealthDataPoint>> _prepareQuery(
+    DateTime startTime,
+    DateTime endTime,
+    HealthDataType dataType,
+    bool isPriorityQueue,
+  ) async {
     // Ask for device ID only once
     _deviceId ??= _platformType == PlatformType.ANDROID
         ? (await _deviceInfo.androidInfo).id
@@ -295,23 +322,95 @@ class HealthFactory {
       throw HealthException(dataType, 'Not available on platform $_platformType');
     }
 
-    return await _dataQuery(startTime, endTime, dataType);
+    return await _dataQuery(startTime, endTime, dataType, isPriorityQueue);
   }
 
+  List<DataPointInput> requests = [];
+
   /// The main function for fetching health data
-  Future<List<HealthDataPoint>> _dataQuery(DateTime startTime, DateTime endTime, HealthDataType dataType) async {
-    final args = <String, dynamic>{
-      'dataTypeKey': dataType.name,
-      'dataUnitKey': _dataTypeToUnit[dataType]!.name,
-      'startTimeSec': startTime.millisecondsSinceEpoch ~/ 1000,
-      'endTimeSec': endTime.millisecondsSinceEpoch ~/ 1000,
-    };
-    List<Map>? fetchedDataPoints = await _channel.invokeListMethod('getData', args);
-    if (fetchedDataPoints != null) {
-      return _parse(dataType: dataType, dataPoints: fetchedDataPoints);
+  Future<List<HealthDataPoint>> _dataQuery(
+    DateTime startTime,
+    DateTime endTime,
+    HealthDataType dataType,
+    bool isPriorityQueue,
+  ) async {
+    final _completer = new Completer<List<HealthDataPoint>>();
+
+    /// We have an issue with fetching sleep from android divided into hours, so we make an exception here
+    final hours = (dataType == HealthDataType.SLEEP && Platform.isAndroid)
+        ? [Pair(startTime, endTime)]
+        : _divideDateRangeIntoHours(startTime, endTime);
+
+    final dataPointInput = DataPointInput(
+      completer: _completer,
+      dateRanges: hours,
+      type: dataType,
+    );
+    if (isPriorityQueue) {
+      requests.insert(0, dataPointInput);
     } else {
-      return <HealthDataPoint>[];
+      requests.add(dataPointInput);
     }
+
+    _processRequests();
+
+    return _completer.future;
+  }
+
+  bool processing = false;
+
+  Future<void> _processRequests() async {
+    if (processing) {
+      return;
+    }
+    processing = true;
+    if (requests.isNotEmpty) {
+      final List<HealthDataPoint> result = [];
+
+      final requestToProcess = requests.first;
+
+      try {
+        for (var dates in requestToProcess.dateRanges) {
+          final args = <String, dynamic>{
+            'dataTypeKey': requestToProcess.type.name,
+            'dataUnitKey': _dataTypeToUnit[requestToProcess.type]!.name,
+            'startTimeSec': dates.first.millisecondsSinceEpoch ~/ 1000,
+            'endTimeSec': dates.second.millisecondsSinceEpoch ~/ 1000,
+          };
+
+          List<Map>? fetchedDataPoints = await _channel.invokeListMethod('getData', args);
+          if (fetchedDataPoints != null) {
+            result.addAll(_parse(dataType: requestToProcess.type, dataPoints: fetchedDataPoints));
+          } else {
+            result.addAll([]);
+          }
+        }
+
+        requestToProcess.completer.complete(result);
+      } catch (e, st) {
+        requestToProcess.completer.completeError(e, st);
+      }
+    }
+    processing = false;
+    await _processRequests();
+  }
+
+  /// Method accepting range of times, and returns a pairs of start and end times for each hour in the range.
+  /// For example, if the range is from 2021-01-01 10:00:00 to 2021-01-01 12:00:00, the method will return:
+  /// [ [2021-01-01 10:00:00, 2021-01-01 11:00:00], [2021-01-01 11:00:00, 2021-01-01 12:00:00] ]
+  /// If the difference between start time and end time is less than an hour, the method will return a single
+  List<Pair<DateTime, DateTime>> _divideDateRangeIntoHours(DateTime startTime, DateTime endTime) {
+    final List<Pair<DateTime, DateTime>> dateHours = [];
+    final int differenceInHours = endTime.difference(startTime).inHours;
+    for (int i = 0; i < differenceInHours; i++) {
+      final DateTime startHour = startTime.add(Duration(hours: i));
+      final DateTime endHour = startTime.add(Duration(hours: i + 1));
+      dateHours.add(Pair(startHour, endHour));
+    }
+    if (dateHours.isEmpty) {
+      dateHours.add(Pair(startTime, endTime));
+    }
+    return dateHours;
   }
 
   List<HealthDataPoint> _parse({required HealthDataType dataType, required List<Map> dataPoints}) {
