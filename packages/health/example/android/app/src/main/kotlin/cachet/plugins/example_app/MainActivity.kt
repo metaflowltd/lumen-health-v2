@@ -1,6 +1,8 @@
 package com.metaflow.lumen_tng.app
 
-import io.flutter.embedding.android.FlutterFragmentActivity
+import android.os.Bundle
 
-class MainActivity : FlutterFragmentActivity() {
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity: FlutterActivity() {
 }
