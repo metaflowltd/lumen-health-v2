@@ -360,37 +360,38 @@ class HealthFactory {
   bool processing = false;
 
   Future<void> _processRequests() async {
-    if (processing) {
+    if (processing || requests.isEmpty) {
       return;
     }
     processing = true;
-    if (requests.isNotEmpty) {
-      final List<HealthDataPoint> result = [];
 
-      final requestToProcess = requests.first;
+    final List<HealthDataPoint> result = [];
 
-      try {
-        for (var dates in requestToProcess.dateRanges) {
-          final args = <String, dynamic>{
-            'dataTypeKey': requestToProcess.type.name,
-            'dataUnitKey': _dataTypeToUnit[requestToProcess.type]!.name,
-            'startTimeSec': dates.first.millisecondsSinceEpoch ~/ 1000,
-            'endTimeSec': dates.second.millisecondsSinceEpoch ~/ 1000,
-          };
+    final requestToProcess = requests.first;
 
-          List<Map>? fetchedDataPoints = await _channel.invokeListMethod('getData', args);
-          if (fetchedDataPoints != null) {
-            result.addAll(_parse(dataType: requestToProcess.type, dataPoints: fetchedDataPoints));
-          } else {
-            result.addAll([]);
-          }
+    try {
+      for (var dates in requestToProcess.dateRanges) {
+        final args = <String, dynamic>{
+          'dataTypeKey': requestToProcess.type.name,
+          'dataUnitKey': _dataTypeToUnit[requestToProcess.type]!.name,
+          'startTimeSec': dates.first.millisecondsSinceEpoch ~/ 1000,
+          'endTimeSec': dates.second.millisecondsSinceEpoch ~/ 1000,
+        };
+
+        List<Map>? fetchedDataPoints = await _channel.invokeListMethod('getData', args);
+        if (fetchedDataPoints != null) {
+          result.addAll(_parse(dataType: requestToProcess.type, dataPoints: fetchedDataPoints));
+        } else {
+          result.addAll([]);
         }
-
-        requestToProcess.completer.complete(result);
-      } catch (e, st) {
-        requestToProcess.completer.completeError(e, st);
       }
+
+      requestToProcess.completer.complete(result);
+    } catch (e, st) {
+      requestToProcess.completer.completeError(e, st);
     }
+
+    requests.removeAt(0);
     processing = false;
     await _processRequests();
   }
